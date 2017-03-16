@@ -5,12 +5,16 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.NumberUtils;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TimeZone;
 
 /**
  * Created by pacman29 on 16.03.17.
@@ -119,17 +123,30 @@ public class PostsTableService {
         }
     }
 
-    public final List<PostModel> insertPostsIntoDb(final List<PostModel> posts, final String slug) {
-        final StringBuilder[] requests = makeRequests(slug);
+    public static PostModel read(ResultSet rs, int rowNum) throws SQLException {
+        final Timestamp timestamp = rs.getTimestamp("created");
+        final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+        dateFormat.setTimeZone(TimeZone.getTimeZone("GMT+03:00"));
+
+        return new PostModel(
+                rs.getString("author"),
+                dateFormat.format(timestamp),
+                rs.getString("forum"),
+                rs.getInt("id"),
+                rs.getBoolean("isEdited"),
+                rs.getString("message"),
+                rs.getInt("parent"),
+                rs.getInt("thread")
+        );
+    }
+
+    public final List<PostModel> insertPosts(final List<PostModel> posts, final String slug) {
+        final Map<String,String> requests = makeRequests(slug);
 
         for (PostModel post : posts) {
 
             if (post.getParent() != 0) {
-                final List<Integer> dBPosts = jdbcTemplate.queryForList(
-                        requests[3].toString(),
-                        Integer.class,
-                        isNumber ? id : slug
-                );
+                final List<Integer> dBPosts = jdbc.queryForList(requests.get("check"), Integer.class, slug);
 
                 if (!dBPosts.contains(post.getParent())) {
                     throw new DuplicateKeyException(null);
@@ -146,14 +163,14 @@ public class PostsTableService {
                 timestamp = Timestamp.from(timestamp.toInstant().plusSeconds(-10800));
             }
 
-            jdbcTemplate.update(requests[0].toString(), post.getAuthor(), timestamp, isNumber ? id : slug,
-                    post.getMessage(), isNumber ? id : slug, post.getParent());
+            jdbc.update(requests.get("insert"), post.getAuthor(), timestamp,slug,
+                    post.getMessage(),slug, post.getParent());
         }
 
-        jdbcTemplate.update(requests[2].toString(), posts.size(), isNumber ? id : slug);
+        jdbc.update(requests.get("update"), posts.size(), slug);
 
-        final List<PostModel> dbPosts = jdbcTemplate.query(requests[1].toString(),
-                isNumber ? new Object[]{id} : new Object[]{slug}, PostService::read);
+        final List<PostModel> dbPosts = jdbc.query(requests.get("get"),
+                new Object[]{slug}, PostsTableService::read);
         final Integer beginIndex = dbPosts.size() - posts.size();
         final Integer endIndex = dbPosts.size();
 

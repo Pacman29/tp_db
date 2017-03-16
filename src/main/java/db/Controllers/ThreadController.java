@@ -1,5 +1,7 @@
 package db.Controllers;
 
+import db.DatabaseServices.PostsTableService;
+import db.DatabaseServices.PostsTableService.PostModel;
 import db.DatabaseServices.ThreadsTableService;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DuplicateKeyException;
@@ -17,10 +19,12 @@ import java.util.List;
 @RestController
 @RequestMapping(value = "api/thread/{slug}")
 public class ThreadController {
-    private final ThreadsTableService service;
+    private final ThreadsTableService threadsservice;
+    private final PostsTableService postsservices;
 
-    public ThreadController(ThreadsTableService service,) {
-        this.service = service;
+    public ThreadController(ThreadsTableService threadsservice, PostsTableService postsservices) {
+        this.threadsservice = threadsservice;
+        this.postsservices = postsservices;
     }
 
     @RequestMapping(value = "/create",
@@ -39,7 +43,7 @@ public class ThreadController {
                 throw new EmptyResultDataAccessException(0);
             }
 
-            dbPosts = service.insertPostsIntoDb(posts, slug);
+            dbPosts = postsservices.insertPosts(posts, slug);
 
         } catch (DuplicateKeyException ex) {
             return new ResponseEntity<>(HttpStatus.CONFLICT);
