@@ -30,6 +30,7 @@ public class UsersTableService {
         }
 
         public UserModel() {
+            this.about = this.email = this.fullname = this.nickname = "";
         }
 
         public String getAbout() {

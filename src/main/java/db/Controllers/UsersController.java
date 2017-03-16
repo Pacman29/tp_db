@@ -70,7 +70,7 @@ public class UsersController {
             method = RequestMethod.POST,
             produces = MediaType.APPLICATION_JSON_VALUE,
             consumes = MediaType.APPLICATION_JSON_VALUE)
-    public final ResponseEntity<UserModel> ChangeUserProfile(
+    public final ResponseEntity<Object> ChangeUserProfile(
             @RequestBody UserModel user,
             @PathVariable(value = "nickname") String nickname
     ) {
