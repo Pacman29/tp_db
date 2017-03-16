@@ -2,14 +2,14 @@ package db.Controllers;
 
 import db.DatabaseServices.ForumsTableService;
 import db.DatabaseServices.ForumsTableService.ForumModel;
-import db.DatabaseServices.ThreadTableController.ThreadModel;
+import db.DatabaseServices.ThreadsTableService;
+import db.DatabaseServices.ThreadsTableService.ThreadModel;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,11 +21,13 @@ import java.util.Objects;
 @RestController
 @RequestMapping(value = "api/forum")
 public final class ForumsController {
-    public ForumsController(final ForumsTableService service) {
-        this.service = service;
+    public ForumsController(final ForumsTableService forumservice,final ThreadsTableService threadservice) {
+        this.forumService = forumservice;
+        this.threadService = threadservice;
     }
 
-    private final ForumsTableService service;
+    private final ForumsTableService forumService;
+    private final ThreadsTableService threadService;
 
     @RequestMapping(value = "/create",
             method = RequestMethod.POST,
@@ -34,23 +36,23 @@ public final class ForumsController {
     public final ResponseEntity<Object> createForum(
             @RequestBody final ForumModel forum) {
         try {
-            service.insert(forum);
+            forumService.insert(forum);
 
         } catch (DuplicateKeyException ex) {
-            return new ResponseEntity<>(service.get(forum).get(0),HttpStatus.CONFLICT);
+            return new ResponseEntity<>(forumService.get(forum).get(0),HttpStatus.CONFLICT);
 
         } catch (DataAccessException ex) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
 
-        return new ResponseEntity<>(service.get(forum).get(0), HttpStatus.CREATED);
+        return new ResponseEntity<>(forumService.get(forum).get(0), HttpStatus.CREATED);
     }
 
     @RequestMapping(value = "/{slug}/create",
             method = RequestMethod.POST,
             produces = MediaType.APPLICATION_JSON_VALUE,
             consumes = MediaType.APPLICATION_JSON_VALUE)
-    public final ResponseEntity<ThreadModel> createSlug(
+    public final ResponseEntity<Object> createSlug(
             @RequestBody final ThreadModel thread,
             @PathVariable(value = "slug") final String slug) {
 
@@ -65,14 +67,14 @@ public final class ForumsController {
         final List<ThreadModel> threads;
 
         try {
-            threads = service.insertThreadIntoDb(thread);
+            threads = threadService.insert(thread);
 
             if (threads.isEmpty()) {
                 throw new EmptyResultDataAccessException(0);
             }
 
         } catch (DuplicateKeyException ex) {
-            return new ResponseEntity<>(service.getThreadInfo(thread.getSlug()).get(0), HttpStatus.CONFLICT);
+            return new ResponseEntity<>(threadService.get(thread).get(0), HttpStatus.CONFLICT);
 
         } catch (DataAccessException ex) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
@@ -94,7 +96,7 @@ public final class ForumsController {
         forum.setSlug(slug);
 
         try {
-            forums = service.get(forum);
+            forums = forumService.get(forum);
 
             if (forums.isEmpty()) {
                 throw new EmptyResultDataAccessException(0);
@@ -105,5 +107,31 @@ public final class ForumsController {
         }
 
         return new ResponseEntity<>(forums.get(0), HttpStatus.OK);
+    }
+
+    @RequestMapping(value = "/{slug}/threads", produces = MediaType.APPLICATION_JSON_VALUE)
+    public final ResponseEntity<Object> viewThreads(
+            @RequestParam(value = "limit", required = false, defaultValue = "100") final Integer limit,
+            @RequestParam(value = "since", required = false) final String since,
+            @RequestParam(value = "desc", required = false) final Boolean desc,
+            @PathVariable("slug") final String slug) {
+
+        ForumModel forum = new ForumModel();
+        forum.setSlug(slug);
+        ThreadModel thread = new ThreadModel();
+        thread.setSlug(slug);
+
+        try {
+            final List<ForumModel> forums = forumService.get(forum);
+
+            if (forums.isEmpty()) {
+                throw new EmptyResultDataAccessException(0);
+            }
+
+        } catch (DataAccessException ex) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+
+        return new ResponseEntity<>(threadService.getInfo(thread, limit, since, desc), HttpStatus.OK);
     }
 }
