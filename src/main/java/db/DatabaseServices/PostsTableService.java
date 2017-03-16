@@ -203,6 +203,6 @@ public class PostsTableService {
 
         requests.merge("get"," ORDER BY posts.id",String::concat);
 
-        return new StringBuilder[]{insertRequest, getRequest, updateRequest, checkRequest};
+        return requests;
     }
 }
