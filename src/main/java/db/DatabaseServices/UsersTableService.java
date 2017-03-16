@@ -15,7 +15,7 @@ import java.util.StringJoiner;
  * Created by pacman29 on 16.03.17.
  */
 @Service
-public class UsersTableService {
+public final class UsersTableService {
     public static class UserModel{
         private String about;
         private String email;
@@ -73,7 +73,7 @@ public class UsersTableService {
                              rs.getString("nickname"));
     }
 
-    public UsersTableService(JdbcTemplate jdbc) {
+    public UsersTableService(final JdbcTemplate jdbc) {
         this.jdbc = jdbc;
     }
 

@@ -19,7 +19,7 @@ import java.util.List;
  */
 @RestController
 @RequestMapping(value = "/api/user/{nickname}")
-public class UsersController {
+public final class UsersController {
     public UsersController(final UsersTableService service) {
         this.service = service;
     }

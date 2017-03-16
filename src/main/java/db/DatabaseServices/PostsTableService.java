@@ -20,10 +20,10 @@ import java.util.TimeZone;
  * Created by pacman29 on 16.03.17.
  */
 @Service
-public class PostsTableService {
+public final class PostsTableService {
     private final JdbcTemplate jdbc;
 
-    public PostsTableService(JdbcTemplate jdbc) {
+    public PostsTableService(final JdbcTemplate jdbc) {
         this.jdbc = jdbc;
     }
 
@@ -51,11 +51,12 @@ public class PostsTableService {
             this.id = id;
             this.isEdited = isEdited;
             this.message = message;
-            this.parent = parent;
+            this.parent = parent == null ? 0 : parent;
             this.thread = thread;
         }
 
         public PostModel() {
+            this.parent = 0;
         }
 
         public String getAuthor() {
@@ -90,11 +91,11 @@ public class PostsTableService {
             this.id = id;
         }
 
-        public Boolean getEdited() {
+        public Boolean getIsEdited() {
             return isEdited;
         }
 
-        public void setEdited(Boolean edited) {
+        public void setIsEdited(Boolean edited) {
             isEdited = edited;
         }
 
@@ -144,15 +145,19 @@ public class PostsTableService {
         final Map<String,String> requests = makeRequests(slug);
 
         for (PostModel post : posts) {
-
+            System.out.println("--------------------->>>>>");
+            System.out.println(post.getParent());
             if (post.getParent() != 0) {
-                final List<Integer> dBPosts = jdbc.queryForList(requests.get("check"), Integer.class, slug);
-
+                System.out.println("1aaaaaaaaaaaaaaaaa");
+                System.out.println(requests.get("check"));
+                System.out.println(slug.toString());
+                final List<Integer> dBPosts = jdbc.queryForList(requests.get("check"), Integer.class);
+                System.out.println("2aaaaaaaaaaaaaaaaa");
                 if (!dBPosts.contains(post.getParent())) {
                     throw new DuplicateKeyException(null);
                 }
             }
-
+            System.out.println("3aaaaaaaaaaaaaaaaa");
             if (post.getCreated() == null) {
                 post.setCreated(LocalDateTime.now().toString());
             }
@@ -163,14 +168,26 @@ public class PostsTableService {
                 timestamp = Timestamp.from(timestamp.toInstant().plusSeconds(-10800));
             }
 
-            jdbc.update(requests.get("insert"), post.getAuthor(), timestamp,slug,
-                    post.getMessage(),slug, post.getParent());
+            System.out.println(requests.get("insert"));
+            System.out.println(post.getAuthor());
+            System.out.println(timestamp);
+            System.out.println(slug);
+            System.out.println(post.getMessage());
+            System.out.println(slug);
+            System.out.println(post.getParent());
+
+            jdbc.update(requests.get("insert"), post.getAuthor(), timestamp,
+                    post.getMessage(), post.getParent());
+
+            System.out.println("4aaaaaaaaaaaaaaaaa");
         }
 
-        jdbc.update(requests.get("update"), posts.size(), slug);
+        jdbc.update(requests.get("update"), posts.size());
+        System.out.println("5aaaaaaaaaaaaaaaaa");
 
-        final List<PostModel> dbPosts = jdbc.query(requests.get("get"),
-                new Object[]{slug}, PostsTableService::read);
+
+        final List<PostModel> dbPosts = jdbc.query(requests.get("get"), PostsTableService::read);
+        System.out.println("6aaaaaaaaaaaaaaaaa");
         final Integer beginIndex = dbPosts.size() - posts.size();
         final Integer endIndex = dbPosts.size();
 
@@ -188,33 +205,32 @@ public class PostsTableService {
                 "WHERE forums.slug = (SELECT threads.forum FROM threads WHERE");
         requests.put("check","SELECT posts.id FROM posts WHERE posts.thread = ");
 
-        if(slug.matches("^-?\\d+$"))
-        {
+        if(slug.matches("^-?\\d+$")) {
             requests.merge("insert",
-                           "VALUES(?, ?, (SELECT forum FROM threads WHERE id = ?), ?, ?, ?)",
+                           "VALUES(?, ?, (SELECT forum FROM threads WHERE id = "+ slug +"), ?, "+slug+", ?)",
                           String::concat);
             requests.merge("get",
-                    " ?",
+                    slug,
                     String::concat);
             requests.merge("update",
-                    " threads.id = ?)",
+                    " threads.id = "+ slug +")",
                     String::concat);
             requests.merge("check",
-                    " ?",
+                    slug,
                     String::concat);
         } else {
             requests.merge("insert",
-                    "VALUES(?, ?, (SELECT forum FROM threads WHERE LOWER(slug) = LOWER(?)), ?," +
-                            "(SELECT id FROM threads WHERE LOWER(slug) = LOWER(?)), ?)",
+                    "VALUES(?, ?, (SELECT forum FROM threads WHERE LOWER(slug) = LOWER('"+slug+"')), ?," +
+                            "(SELECT id FROM threads WHERE LOWER(slug) = LOWER('"+slug+"')), ?)",
                     String::concat);
             requests.merge("get",
-                    " (SELECT id FROM threads WHERE LOWER(slug) = LOWER(?))",
+                    " (SELECT id FROM threads WHERE LOWER(slug) = LOWER('"+slug+"'))",
                     String::concat);
             requests.merge("update",
-                    " threads.slug = ?)",
+                    " threads.slug = '"+slug+"')",
                     String::concat);
             requests.merge("check",
-                    " (SELECT threads.id FROM threads WHERE LOWER(threads.slug) = LOWER(?))",
+                    " (SELECT threads.id FROM threads WHERE LOWER(threads.slug) = LOWER('"+slug+"'))",
                     String::concat);
         }
 

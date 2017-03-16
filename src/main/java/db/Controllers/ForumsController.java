@@ -21,7 +21,8 @@ import java.util.Objects;
 @RestController
 @RequestMapping(value = "api/forum")
 public final class ForumsController {
-    public ForumsController(final ForumsTableService forumservice,final ThreadsTableService threadservice) {
+    public ForumsController(final ForumsTableService forumservice,
+                            final ThreadsTableService threadservice) {
         this.forumService = forumservice;
         this.threadService = threadservice;
     }
