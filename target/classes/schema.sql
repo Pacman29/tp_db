@@ -34,7 +34,8 @@ CREATE TABLE IF NOT EXISTS threads (
 
 CREATE TABLE IF NOT EXISTS uservotes (
   nickname CITEXT COLLATE ucs_basic NOT NULL REFERENCES users (nickname),
-  voice INTEGER DEFAULT 0
+  voice INTEGER DEFAULT 0,
+  thread_slug CITEXT REFERENCES threads (slug)
 );
 
 CREATE TABLE IF NOT EXISTS posts (

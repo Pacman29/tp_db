@@ -12,6 +12,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
+import db.DatabaseServices.UservotesTableController.VoteModel;
 /**
  * Created by pacman29 on 16.03.17.
  */
@@ -118,6 +119,20 @@ public final class ThreadsTableService {
         public void setVotes(Integer votes) {
             this.votes = votes;
         }
+
+        @Override
+        public String toString() {
+            return "ThreadModel{" +
+                    "author='" + author + '\'' +
+                    ", created='" + created + '\'' +
+                    ", forum='" + forum + '\'' +
+                    ", id=" + id +
+                    ", message='" + message + '\'' +
+                    ", slug='" + slug + '\'' +
+                    ", title='" + title + '\'' +
+                    ", votes=" + votes +
+                    '}';
+        }
     }
 
     public final List<ThreadModel> insert(final ThreadModel thread) {
@@ -131,24 +146,32 @@ public final class ThreadsTableService {
             timestamp = Timestamp.from(timestamp.toInstant().plusSeconds(-10800));
         }
 
-
+        System.out.println(thread);
         jdbc.update("INSERT INTO threads (author, created, forum, \"message\", " +
                 "slug, title) VALUES(?, ?, " +
                 "(SELECT slug FROM forums WHERE LOWER(slug) = LOWER(?)), " +
                 "?, ?, ?)", thread.getAuthor(), timestamp, thread.getForum(),
                 thread.getMessage(), thread.getSlug(), thread.getTitle()
         );
-
+        System.out.println("insert ThreadsTable test");
         jdbc.update("UPDATE forums SET threads = threads + 1 WHERE LOWER(slug) = LOWER(?)",
                 thread.getForum());
-
-        return get(thread);
+        System.out.println("insert ThreadsTable test");
+        return get(thread.slug);
     }
 
-    public final List<ThreadModel> get(final ThreadModel thread) {
+    public final List<ThreadModel> get(final String slug) {
         return jdbc.query(
                 "SELECT * FROM threads WHERE LOWER(slug) = LOWER(?)",
-                new Object[]{thread.getSlug()},
+                new Object[]{slug},
+                ThreadsTableService::read
+        );
+    }
+
+    public final List<ThreadModel> get(final Integer id) {
+        return jdbc.query(
+                "SELECT * FROM threads WHERE id = ?",
+                new Object[]{id},
                 ThreadsTableService::read
         );
     }
@@ -191,7 +214,21 @@ public final class ThreadsTableService {
         );
     }
 
+    public List<ThreadModel> updateVotes(String slug,Integer vote){
+        System.out.println(slug.toString() +"  "+ vote.toString());
+        jdbc.update("UPDATE threads SET votes = votes+ ("+ vote.toString() +") WHERE LOWER(threads.slug) = LOWER(?)",
+                slug);
+        return jdbc.query("SELECT * FROM threads WHERE LOWER(threads.slug) = LOWER(?)",
+                new Object[]{slug}, ThreadsTableService::read);
+    }
 
+    public List<ThreadModel> updateVotes(Integer id,Integer vote){
+        System.out.println(id.toString() +"  "+ vote.toString());
+        jdbc.update("UPDATE threads SET votes = votes+ ("+ vote.toString()+") WHERE id = ?",
+                id);
+        return jdbc.query("SELECT * FROM threads WHERE id = ?",
+                new Object[]{id}, ThreadsTableService::read);
+    }
 
 
     public static ThreadModel read(ResultSet rs, int rowNum) throws SQLException {

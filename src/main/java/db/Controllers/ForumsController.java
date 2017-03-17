@@ -75,7 +75,7 @@ public final class ForumsController {
             }
 
         } catch (DuplicateKeyException ex) {
-            return new ResponseEntity<>(threadService.get(thread).get(0), HttpStatus.CONFLICT);
+            return new ResponseEntity<>(threadService.get(thread.getSlug()).get(0), HttpStatus.CONFLICT);
 
         } catch (DataAccessException ex) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);

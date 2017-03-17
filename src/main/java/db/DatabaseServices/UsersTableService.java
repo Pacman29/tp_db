@@ -64,6 +64,16 @@ public final class UsersTableService {
         public void setNickname(String nickname) {
             this.nickname = nickname;
         }
+
+        @Override
+        public String toString() {
+            return "UserModel{" +
+                    "about='" + about + '\'' +
+                    ", email='" + email + '\'' +
+                    ", fullname='" + fullname + '\'' +
+                    ", nickname='" + nickname + '\'' +
+                    '}';
+        }
     }
 
     public static UserModel read(ResultSet rs, int rowNum) throws SQLException {
@@ -82,8 +92,11 @@ public final class UsersTableService {
 
 
     public final void insert(final UserModel user){
+        System.out.println("test insert user");
+        System.out.println(user);
         jdbc.update("INSERT INTO users (about, email, fullname, nickname) VALUES (?,?,?,?)",
                 user.getAbout(),user.getEmail(),user.getFullname(),user.getNickname());
+        System.out.println("test insert user");
     }
 
     public final List<UserModel> get(final UserModel user){
