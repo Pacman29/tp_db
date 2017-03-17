@@ -150,4 +150,48 @@ public final class UsersTableService {
         args.add(user.getNickname());
         jdbc.update(sql.toString(), args.toArray());
     }
+
+
+    public final List<UserModel> getInfo(
+            final String slug,
+            final Integer limit,
+            final String since,
+            final Boolean desc
+    ) {
+        StringBuilder sql = new StringBuilder("SELECT * FROM users WHERE LOWER(users.nickname) IN " +
+                "(SELECT LOWER(posts.author) FROM posts WHERE LOWER(posts.forum) = LOWER(?) " +
+                "UNION " +
+                "SELECT LOWER(threads.author) FROM threads WHERE LOWER(threads.forum) = LOWER(?))");
+        final List<Object> args = new ArrayList<>();
+        args.add(slug);
+        args.add(slug);
+
+        if (since != null) {
+            sql.append(" AND LOWER(users.nickname) ");
+
+            if (desc == Boolean.TRUE) {
+                sql.append("< LOWER(?)");
+
+            } else {
+                sql.append("> LOWER(?)");
+            }
+
+            args.add(since);
+        }
+
+        sql.append(" ORDER BY LOWER(users.nickname) COLLATE ucs_basic");
+
+        if (desc == Boolean.TRUE) {
+            sql.append(" DESC");
+        }
+
+        sql.append(" LIMIT ?");
+        args.add(limit);
+
+        return jdbc.query(
+                sql.toString(),
+                args.toArray(new Object[args.size()]),
+                UsersTableService::read
+        );
+    }
 }

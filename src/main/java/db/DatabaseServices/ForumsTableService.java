@@ -93,10 +93,10 @@ public final class ForumsTableService {
                 forum.getSlug(), forum.getTitle(), forum.getUser());
     }
 
-    public final List<ForumModel> get(final ForumModel forum) {
+    public final List<ForumModel> get(final String slug) {
         return jdbc.query(
                 "SELECT * FROM forums WHERE LOWER(slug) = LOWER(?)",
-                new Object[]{forum.getSlug()},
+                new Object[]{slug},
                 ForumsTableService::read);
     }
 

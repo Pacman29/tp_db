@@ -2,6 +2,7 @@ package db.Controllers;
 
 import db.DatabaseServices.PostsTableService;
 import db.DatabaseServices.PostsTableService.PostModel;
+import db.DatabaseServices.PostsTableService.PostsMarkerModel;
 import db.DatabaseServices.ThreadsTableService;
 import db.DatabaseServices.ThreadsTableService.ThreadModel;
 import db.DatabaseServices.UservotesTableController;
@@ -115,6 +116,125 @@ public final class ThreadController {
         }
 
         return new ResponseEntity<>(threads.get(0), HttpStatus.OK);
+    }
+
+    @RequestMapping(value = "/details", produces = MediaType.APPLICATION_JSON_VALUE)
+    public final ResponseEntity<Object> viewThread(
+            @PathVariable(value = "slug") final String slug
+    ) {
+        final List<ThreadModel> threads;
+
+        try {
+            if(slug.matches("^-?\\d+$")){
+                threads = threadservice.get(Integer.valueOf(slug));
+            } else {
+                threads = threadservice.get(slug);
+            }
+
+            if (threads.isEmpty()) {
+                throw new EmptyResultDataAccessException(0);
+            }
+
+        } catch (DataAccessException ex) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+
+        return new ResponseEntity<>(threads.get(0), HttpStatus.OK);
+    }
+
+    @RequestMapping(value = "/details",
+            method = RequestMethod.POST,
+            produces = MediaType.APPLICATION_JSON_VALUE,
+            consumes = MediaType.APPLICATION_JSON_VALUE)
+    public final ResponseEntity<Object> updateThread(
+            @RequestBody final ThreadModel thread,
+            @PathVariable(value = "slug") final String slug) {
+
+        final List<ThreadModel> threads;
+
+        try {
+            if(slug.matches("^-?\\d+$")){
+                threadservice.updateThreadInfo(thread, Integer.valueOf(slug));
+                threads = threadservice.get(Integer.valueOf(slug));
+            } else {
+                threadservice.updateThreadInfo(thread,slug);
+                threads = threadservice.get(slug);
+            }
+
+            if (threads.isEmpty()) {
+                throw new EmptyResultDataAccessException(0);
+            }
+
+        } catch (DuplicateKeyException ex) {
+            return new ResponseEntity<>(threadservice.get(slug).get(0), HttpStatus.CONFLICT);
+
+        } catch (DataAccessException ex) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+
+        return new ResponseEntity<>(threads.get(0), HttpStatus.OK);
+    }
+
+    private static Integer markerValue = 0;
+
+    @RequestMapping(value = "/posts", produces = MediaType.APPLICATION_JSON_VALUE)
+    public final ResponseEntity<Object> viewThreads(
+            @RequestParam(value = "limit", required = false, defaultValue = "100") final Integer limit,
+            @RequestParam(value = "marker", required = false) final String marker,
+            @RequestParam(value = "sort", required = false, defaultValue = "flat") final String sort,
+            @RequestParam(value = "desc", required = false) final Boolean desc,
+            @PathVariable("slug") final String slug
+    ) {
+
+        final List<PostModel> posts = slug.matches("^-?\\d+$") ? postservices.get(sort, desc,
+                 Integer.valueOf(slug)) : postservices.get(sort, desc, slug);
+
+        if (posts.isEmpty()) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+
+        markerValue += marker != null && !Objects.equals(sort, "parent_tree") ? limit : 0;
+
+
+        if (Objects.equals(sort, "parent_tree")) {
+
+            if (markerValue >= posts.size() && marker != null) {
+                markerValue = 0;
+
+                return new ResponseEntity<>(new PostsMarkerModel(marker, new ArrayList<>()), HttpStatus.OK);
+
+            } else if (markerValue == posts.size()) {
+                markerValue = 0;
+            }
+
+            Integer zeroCount = 0, counter = 0;
+
+            for (PostModel post : posts.subList(markerValue, posts.size())) {
+
+                if (zeroCount.equals(limit) && desc == Boolean.TRUE) {
+                    break;
+
+                } else if (zeroCount.equals(limit + 1) && (desc == Boolean.FALSE || desc == null)) {
+                    --counter;
+                    break;
+                }
+
+                zeroCount += post.getParent().equals(0) ? 1 : 0;
+                ++counter;
+            }
+
+            return new ResponseEntity<>(new PostsMarkerModel(marker,
+                    posts.subList(markerValue, markerValue += counter)), HttpStatus.OK);
+        }
+
+        if (markerValue > posts.size()) {
+            markerValue = 0;
+
+            return new ResponseEntity<>(new PostsMarkerModel(marker, new ArrayList<>()), HttpStatus.OK);
+        }
+
+        return new ResponseEntity<>(new PostsMarkerModel(marker, posts.subList(markerValue,
+                limit + markerValue > posts.size() ? posts.size() : limit + markerValue)), HttpStatus.OK);
     }
 
 }

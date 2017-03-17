@@ -11,10 +11,7 @@ import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.TimeZone;
+import java.util.*;
 
 /**
  * Created by pacman29 on 16.03.17.
@@ -122,7 +119,63 @@ public final class PostsTableService {
         public void setThread(Integer thread) {
             this.thread = thread;
         }
+
+        @Override
+        public String toString() {
+            return "PostModel{" +
+                    "author='" + author + '\'' +
+                    ", created='" + created + '\'' +
+                    ", forum='" + forum + '\'' +
+                    ", id=" + id +
+                    ", isEdited=" + isEdited +
+                    ", message='" + message + '\'' +
+                    ", parent=" + parent +
+                    ", thread=" + thread +
+                    '}';
+        }
     }
+
+    public static class PostsMarkerModel {
+        private List<PostModel> posts;
+        private String marker;
+
+        public PostsMarkerModel(
+                final String marker,
+                final List<PostModel> posts
+        ) {
+            this.marker = marker == null ? "some marker" : marker;
+            this.posts = posts;
+        }
+
+        public PostsMarkerModel() {
+            this.marker = marker == null ? "some marker" : marker;
+        }
+
+        public final List<PostModel> getPosts() {
+            return this.posts;
+        }
+
+        public void setPosts(final List<PostModel> posts) {
+            this.posts = posts;
+        }
+
+        public final String getMarker() {
+            return this.marker;
+        }
+
+        public void setMarker(final String marker) {
+            this.marker = marker;
+        }
+
+        @Override
+        public String toString() {
+            return "PostsMarkerModel{" +
+                    "posts=" + posts +
+                    ", marker='" + marker + '\'' +
+                    '}';
+        }
+    }
+
 
     public static PostModel read(ResultSet rs, int rowNum) throws SQLException {
         final Timestamp timestamp = rs.getTimestamp("created");
@@ -145,19 +198,13 @@ public final class PostsTableService {
         final Map<String,String> requests = makeRequests(slug);
 
         for (PostModel post : posts) {
-            System.out.println("--------------------->>>>>");
-            System.out.println(post.getParent());
             if (post.getParent() != 0) {
-                System.out.println("1aaaaaaaaaaaaaaaaa");
-                System.out.println(requests.get("check"));
-                System.out.println(slug.toString());
                 final List<Integer> dBPosts = jdbc.queryForList(requests.get("check"), Integer.class);
-                System.out.println("2aaaaaaaaaaaaaaaaa");
+
                 if (!dBPosts.contains(post.getParent())) {
                     throw new DuplicateKeyException(null);
                 }
             }
-            System.out.println("3aaaaaaaaaaaaaaaaa");
             if (post.getCreated() == null) {
                 post.setCreated(LocalDateTime.now().toString());
             }
@@ -168,26 +215,15 @@ public final class PostsTableService {
                 timestamp = Timestamp.from(timestamp.toInstant().plusSeconds(-10800));
             }
 
-            System.out.println(requests.get("insert"));
-            System.out.println(post.getAuthor());
-            System.out.println(timestamp);
-            System.out.println(slug);
-            System.out.println(post.getMessage());
-            System.out.println(slug);
-            System.out.println(post.getParent());
-
             jdbc.update(requests.get("insert"), post.getAuthor(), timestamp,
                     post.getMessage(), post.getParent());
 
-            System.out.println("4aaaaaaaaaaaaaaaaa");
         }
 
         jdbc.update(requests.get("update"), posts.size());
-        System.out.println("5aaaaaaaaaaaaaaaaa");
-
 
         final List<PostModel> dbPosts = jdbc.query(requests.get("get"), PostsTableService::read);
-        System.out.println("6aaaaaaaaaaaaaaaaa");
+
         final Integer beginIndex = dbPosts.size() - posts.size();
         final Integer endIndex = dbPosts.size();
 
@@ -237,5 +273,67 @@ public final class PostsTableService {
         requests.merge("get"," ORDER BY posts.id",String::concat);
 
         return requests;
+    }
+
+    public final List<PostModel> get(
+            final String sort,
+            final Boolean desc,
+            final String slug
+    ) {
+        final String recurseTemplate = " tree AS (SELECT *, array[id] AS path FROM some_threads WHERE parent = 0 " +
+                "UNION SELECT st.*, tree.path || st.id AS path FROM tree JOIN some_threads st ON st.parent = tree.id) " +
+                "SELECT * FROM tree ORDER BY path";
+        final StringBuilder sql = new StringBuilder();
+
+        final String sqlTemplate = "SELECT * FROM posts WHERE posts.thread = " +
+                "(SELECT threads.id FROM threads WHERE LOWER(threads.slug) = LOWER(?))";
+
+        if (Objects.equals(sort, "flat")) {
+            sql.append(sqlTemplate + " ORDER BY posts.created");
+        } else {
+            sql.append("WITH RECURSIVE some_threads AS (" + sqlTemplate + "), " + recurseTemplate);
+        }
+
+
+        if (desc == Boolean.TRUE) {
+            sql.append(" DESC");
+        }
+
+        return jdbc.query(
+                sql.toString(),
+                new Object[]{slug},
+                PostsTableService::read
+        );
+    }
+
+    public final List<PostModel> get(
+            final String sort,
+            final Boolean desc,
+            final Integer id
+    ) {
+        final String recurseTemplate = " tree AS (SELECT *, array[id] AS path FROM some_threads WHERE parent = 0 " +
+                "UNION SELECT st.*, tree.path || st.id AS path FROM tree JOIN some_threads st ON st.parent = tree.id) " +
+                "SELECT * FROM tree ORDER BY path";
+        final StringBuilder sql = new StringBuilder();
+
+        final String sqlTemplate = "SELECT * FROM posts WHERE posts.thread = " +
+                "(SELECT threads.id FROM threads WHERE threads.id = ?)";
+
+        if (Objects.equals(sort, "flat")) {
+            sql.append(sqlTemplate + " ORDER BY posts.created");
+        } else {
+            sql.append("WITH RECURSIVE some_threads AS (" + sqlTemplate + "), " + recurseTemplate);
+        }
+
+
+        if (desc == Boolean.TRUE) {
+            sql.append(" DESC");
+        }
+
+        return jdbc.query(
+                sql.toString(),
+                new Object[]{id},
+                PostsTableService::read
+        );
     }
 }

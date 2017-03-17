@@ -247,4 +247,59 @@ public final class ThreadsTableService {
                 rs.getInt("votes")
         );
     }
+
+
+    public final void updateThreadInfo(final ThreadModel thread, final String slug) {
+        final StringBuilder sql = new StringBuilder("UPDATE threads SET");
+        final List<Object> args = new ArrayList<>();
+        final List<String> str_args = new ArrayList<>();
+
+        if (thread.getMessage() != null && !thread.getMessage().isEmpty()) {
+            str_args.add(" message = ?");
+            args.add(thread.getMessage());
+        }
+
+        if (thread.getTitle() != null && !thread.getTitle().isEmpty()) {
+            str_args.add(" title = ?");
+            args.add(thread.getTitle());
+        }
+
+        if (args.isEmpty()) {
+            return;
+        }
+
+        sql.append(String.join(",",str_args));
+        final Integer id;
+
+        sql.append(" WHERE LOWER(slug) = LOWER(?)");
+        args.add(slug);
+
+        jdbc.update(sql.toString(), args.toArray());
+    }
+
+    public final void updateThreadInfo(final ThreadModel thread, final Integer id) {
+        final StringBuilder sql = new StringBuilder("UPDATE threads SET");
+        final List<Object> args = new ArrayList<>();
+        final List<String> str_args = new ArrayList<>();
+
+        if (thread.getMessage() != null && !thread.getMessage().isEmpty()) {
+            str_args.add(" message = ?");
+            args.add(thread.getMessage());
+        }
+
+        if (thread.getTitle() != null && !thread.getTitle().isEmpty()) {
+            str_args.add(" title = ?");
+            args.add(thread.getTitle());
+        }
+
+        if (args.isEmpty()) {
+            return;
+        }
+
+        sql.append(String.join(",",str_args));
+        sql.append(" WHERE id = ?");
+        args.add(id);
+
+        jdbc.update(sql.toString(), args.toArray());
+    }
 }
