@@ -1,9 +1,19 @@
 package db.DatabaseServices;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.NumberUtils;
+
+import db.DatabaseServices.ForumsTableService.ForumModel;
+import db.DatabaseServices.UsersTableService.UserModel;
+import db.DatabaseServices.ThreadsTableService.ThreadModel;
+import db.DatabaseServices.ForumsTableService;
+import db.DatabaseServices.UsersTableService;
+import db.DatabaseServices.ThreadsTableService;
+
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -194,6 +204,60 @@ public final class PostsTableService {
         );
     }
 
+    public static class PostDetailsModel {
+        private UserModel author;
+        private ForumModel forum;
+        private PostModel post;
+        private ThreadModel thread;
+
+        public PostDetailsModel(
+                final UserModel author,
+                final ForumModel forum,
+                final PostModel post,
+                final ThreadModel thread
+        ) {
+            this.author = author;
+            this.forum = forum;
+            this.post = post;
+            this.thread = thread;
+        }
+
+        public PostDetailsModel() {
+        }
+
+        public final UserModel getAuthor() {
+            return this.author;
+        }
+
+        public void setAuthor(final UserModel author) {
+            this.author = author;
+        }
+
+        public final ForumModel getForum() {
+            return this.forum;
+        }
+
+        public void setForum(ForumModel forum) {
+            this.forum = forum;
+        }
+
+        public final PostModel getPost() {
+            return this.post;
+        }
+
+        public void setPost(PostModel post) {
+            this.post = post;
+        }
+
+        public final ThreadModel getThread() {
+            return this.thread;
+        }
+
+        public void setThread(ThreadModel thread) {
+            this.thread = thread;
+        }
+    }
+
     public final List<PostModel> insertPosts(final List<PostModel> posts, final String slug) {
         final Map<String,String> requests = makeRequests(slug);
 
@@ -336,4 +400,77 @@ public final class PostsTableService {
                 PostsTableService::read
         );
     }
+
+    public final List<PostModel> get(final Integer id) {
+        return jdbc.query(
+                "SELECT * FROM posts WHERE id = ?",
+                new Object[]{id},
+                PostsTableService::read);
+    }
+
+    public final PostDetailsModel getDetailedPost(final PostModel post, String[] related) {
+        UserModel user = null;
+        ForumModel forum = null;
+        ThreadModel thread = null;
+
+        if (related != null) {
+
+            for (String relation : related) {
+
+                if (Objects.equals(relation, "user")) {
+                    UsersTableService userService = new UsersTableService(this.jdbc);
+                    List<UserModel> users = userService.get(new UserModel(null, null, null, post.getAuthor()));
+
+                    if (!users.isEmpty()) {
+                        user = users.get(0);
+                    }
+                }
+
+                if (relation.equals("forum")) {
+                    ForumsTableService forumService = new ForumsTableService(this.jdbc);
+                    List<ForumModel> forums = forumService.get(post.getForum());
+
+                    if (!forums.isEmpty()) {
+                        forum = forums.get(0);
+                    }
+
+                    forum.setThreads(jdbc.queryForObject(
+                            "SELECT COUNT(*) FROM threads WHERE LOWER(forum) = LOWER(?)",
+                            Integer.class,
+                            forum.getSlug()
+                    ));
+                }
+
+                if (relation.equals("thread")) {
+                    ThreadsTableService threadService = new ThreadsTableService(this.jdbc);
+                    List<ThreadModel> threads = threadService.get(post.getThread());
+
+                    if (!threads.isEmpty()) {
+                        thread = threads.get(0);
+                    }
+                }
+            }
+        }
+
+        return new PostDetailsModel(user, forum, post, thread);
+    }
+
+    public final List<PostModel> update(final PostModel post, final Integer id) {
+        final StringBuilder sql = new StringBuilder("UPDATE posts SET \"message\" = ?");
+        List<PostModel> posts = get(id);
+
+        if (posts.isEmpty()) {
+            return posts;
+        }
+
+        if (!Objects.equals(post.getMessage(), posts.get(0).getMessage())) {
+            sql.append(", isEdited = TRUE");
+        }
+
+        sql.append(" WHERE id = ?");
+        jdbc.update(sql.toString(), post.getMessage(), id);
+
+        return get(id);
+    }
+
 }

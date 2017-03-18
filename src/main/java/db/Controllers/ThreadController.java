@@ -71,7 +71,7 @@ public final class ThreadController {
             consumes = MediaType.APPLICATION_JSON_VALUE)
     public final ResponseEntity<Object> voteForThread(
             @RequestBody final VoteModel vote,
-            @PathVariable("slug") final String slug) {
+            @PathVariable("slug") final String slug) throws DataAccessException {
 
         List<ThreadModel> threads = new ArrayList<>();
         try {
@@ -80,6 +80,9 @@ public final class ThreadController {
             {
                 Integer id = Integer.valueOf(slug);
                 threads = threadservice.get(id);
+                if(threads.isEmpty()) {
+                    return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+                }
                 vote.setThread_slug(threads.get(0).getSlug());
                 switch (voteservices.update(vote)){
                     case NOTHING: break;
@@ -193,7 +196,7 @@ public final class ThreadController {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
 
-        markerValue += marker != null && !Objects.equals(sort, "parent_tree") ? limit : 0;
+        markerValue += (marker != null && !Objects.equals(sort, "parent_tree")) ? (limit) : (0);
 
 
         if (Objects.equals(sort, "parent_tree")) {

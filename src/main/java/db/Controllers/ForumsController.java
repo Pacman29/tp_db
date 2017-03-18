@@ -23,15 +23,18 @@ import java.util.Objects;
 @RestController
 @RequestMapping(value = "api/forum")
 public final class ForumsController {
-    public ForumsController(final ForumsTableService forumservice,
-                            final ThreadsTableService threadservice) {
-        this.forumService = forumservice;
-        this.threadService = threadservice;
-    }
 
     private final ForumsTableService forumService;
     private final ThreadsTableService threadService;
     private final UsersTableService userService;
+
+    public ForumsController(ForumsTableService forumService, ThreadsTableService threadService, UsersTableService userService) {
+        this.forumService = forumService;
+        this.threadService = threadService;
+        this.userService = userService;
+    }
+
+
 
     @RequestMapping(value = "/create",
             method = RequestMethod.POST,

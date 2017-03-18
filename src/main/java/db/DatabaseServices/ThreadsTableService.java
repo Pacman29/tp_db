@@ -146,17 +146,16 @@ public final class ThreadsTableService {
             timestamp = Timestamp.from(timestamp.toInstant().plusSeconds(-10800));
         }
 
-        System.out.println(thread);
         jdbc.update("INSERT INTO threads (author, created, forum, \"message\", " +
                 "slug, title) VALUES(?, ?, " +
                 "(SELECT slug FROM forums WHERE LOWER(slug) = LOWER(?)), " +
                 "?, ?, ?)", thread.getAuthor(), timestamp, thread.getForum(),
                 thread.getMessage(), thread.getSlug(), thread.getTitle()
         );
-        System.out.println("insert ThreadsTable test");
+
         jdbc.update("UPDATE forums SET threads = threads + 1 WHERE LOWER(slug) = LOWER(?)",
                 thread.getForum());
-        System.out.println("insert ThreadsTable test");
+
         return get(thread.slug);
     }
 
