@@ -1,0 +1,12 @@
+/home/pacman29/tp_db/src/main/java/db/Controllers/ServiceController.java
+/home/pacman29/tp_db/src/main/java/db/DatabaseServices/ThreadsTableService.java
+/home/pacman29/tp_db/src/main/java/db/Controllers/PostController.java
+/home/pacman29/tp_db/src/main/java/db/DatabaseServices/PostsTableService.java
+/home/pacman29/tp_db/src/main/java/db/Controllers/ForumsController.java
+/home/pacman29/tp_db/src/main/java/db/DatabaseServices/UsersTableService.java
+/home/pacman29/tp_db/src/main/java/db/DatabaseServices/ServiceTableService.java
+/home/pacman29/tp_db/src/main/java/db/Application.java
+/home/pacman29/tp_db/src/main/java/db/DatabaseServices/UservotesTableController.java
+/home/pacman29/tp_db/src/main/java/db/DatabaseServices/ForumsTableService.java
+/home/pacman29/tp_db/src/main/java/db/Controllers/UsersController.java
+/home/pacman29/tp_db/src/main/java/db/Controllers/ThreadController.java
