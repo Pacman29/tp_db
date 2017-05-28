@@ -5,16 +5,6 @@ DROP TABLE IF EXISTS users CASCADE;
 DROP TABLE IF EXISTS forum_users CASCADE;
 DROP TABLE IF EXISTS votes CASCADE;
 
-DROP INDEX IF EXISTS forums_user_id_idx;
-DROP INDEX IF EXISTS threads_user_id_idx;
-DROP INDEX IF EXISTS threads_forum_id_idx;
-DROP INDEX IF EXISTS posts_user_id_idx;
-DROP INDEX IF EXISTS posts_forum_id_idx;
-DROP INDEX IF EXISTS posts_flat_idx;
-DROP INDEX IF EXISTS posts_path_thread_id_idx;
-DROP INDEX IF EXISTS forum_users_user_id_idx;
-DROP INDEX IF EXISTS forum_users_forum_id_idx;
-
 DROP FUNCTION IF EXISTS thread_insert( CITEXT, TIMESTAMPTZ, CITEXT, TEXT, CITEXT, TEXT );
 DROP FUNCTION IF EXISTS update_or_insert_votes( INTEGER, INTEGER, INTEGER );
 
